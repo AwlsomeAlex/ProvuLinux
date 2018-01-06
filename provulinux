@@ -1,0 +1,117 @@
+#!/bin/bash
+# Created by AwlsomeAlex [GNU GPLv3] 
+# Forked from Ivandavidov's Minimal Linux Script
+##set -ex
+######################
+# Configuration Area #
+######################
+KERNEL=4.9.75
+BUSYBOX=1.27.2
+
+
+
+#################
+# Function Area #
+#################
+function logo() {
+clear
+echo "
+  _____                      _      _                  
+ |  __ \                    | |    (_)                 
+ | |__) | __ _____   ___   _| |     _ _ __  _   ___  __
+ |  ___/ '__/ _ \ \ / / | | | |    | | '_ \| | | \ \/ /
+ | |   | | | (_) \ V /| |_| | |____| | | | | |_| |>  < 
+ |_|   |_|  \___/ \_/  \__,_|______|_|_| |_|\__,_/_/\_\\
+
+   Created by AwlsomeAlex [GNU GPLv3] -- Build Script                                                       
+"
+}
+
+
+
+
+##################
+# Execution Area #
+##################
+
+# Pre-Execution Checks
+logo
+echo "Checking for Dependencies..."
+sleep 2
+type wget >/dev/null || { echo >&2 "Package 'wget' is not installed. Please install it and try again. Exiting,..."; exit 1; }
+type bc >/dev/null || { echo >&2 "Package 'bc' is not installed. Please install it and try again. Exiting..."; exit 1; } 
+type gcc >/dev/null || { echo >&2 "Package 'build-essential' is not installed. Please install it and try again. Exiting..."; exit 1; }
+type gawk >/dev/null || { echo >&2 "Package 'gawk' is not installed. Please install it and try again. Exiting..."; exit 1; }
+type xorriso >/dev/null || { echo >&2 "Package 'xorriso' is not installed. Please install it and try again. Exiting..."; exit 1; }
+type qemu-system-x86_64 >/dev/null || { echo >&2 "Package 'qemu' is not installed. Although this isn't critical, it is discouraged."; sleep 3; }
+echo "Cleaning Directory..."
+sleep 2
+rm -rf /tmp/provulinux
+echo "Making Directory..."
+sleep 2
+mkdir -p /tmp/provulinux
+cd /tmp/provulinux
+
+# Main Execution Area
+logo
+echo "Downloading Packages..."
+sleep 2
+wget -o kernel.tar.xz http://kernel.org/pub/linux/kernel/v4.x/linux-$KERNEL.tar.xz
+wget -o busybox.tar.bz2 http://busybox.net/downloads/busybox-$BUSYBOX.tar.bz2
+wget -o syslinux.tar.xz http://kernel.org/pub/linux/utils/boot/syslinux-6.03.tar.xz
+echo "Extracting Packages..."
+sleep 2
+tar -xvf kernel.tar.xz
+tar -xvf busybox.tar.bz2
+tar -xvf syslinux.tar.xz
+mkdir isoimage
+logo
+echo "Compiling BusyBox..."
+sleep 2
+cd busybox-$BUSYBOX
+make distclean defconfig
+sed -i "s/.*CONFIG_STATIC.*/CONFIG_STATIC=y/" .config
+make busybox install
+cd _install
+rm -f linuxrc
+mkdir dev proc sys
+echo '#!/bin/sh' > init
+echo 'dmesg -n 1' >> init
+echo 'mount -t devtmpfs none /dev' >> init
+echo 'mount -t proc none /proc' >> init
+echo 'mount -t sysfs none /sys' >> init
+echo 'echo ""' >> init
+echo 'echo "Bonvenon al Linusko!"' >> init
+echo 'echo "Version: $(uname)"' >> init
+echo 'echo ""' >> init
+echo 'setsid cttyhack /bin/sh' >> init
+chmod +x init
+find . | cpio -R root:root -H newc -o | gzip > ../../isoimage/rootfs.gz
+echo "Compiling Linux..."
+sleep 2
+cd ../../linux-$KERNEL
+make mrproper defconfig bzImage
+echo "Preparing Image..."
+sleep 2
+cp arch/x86/boot/bzImage ../isoimage/kernel.gz
+cd ../isoimage
+cp ../syslinux-6.03/bios/core/isolinux.bin .
+cp ../syslinux-6.03/bios/com32/elflink/ldlinux/ldlinux.c32 .
+echo 'default kernel.gz initrd=rootfs.gz' > ./isolinux.cfg
+echo "Imaging..."
+sleep 2
+xorriso \
+	-as mkisofs \
+	-o ../provulinux-$KERNEL.iso \
+	-b isolinux.bin \
+	-c boot.cat \
+	-no-emul-boot \
+	-boot-load-size 4 \
+	-boot-info-table \
+	./
+cd ..
+logo
+echo "Initializing Virtual Environment..."
+sleep 2
+qemu-system-x86_64 -m 128M -cdrom provulinux-$KERNEL.iso -boot d -vga std
+##set +ex
