@@ -56,14 +56,14 @@ cd /tmp/provulinux
 logo
 echo "Downloading Packages..."
 sleep 2
-wget -o kernel.tar.xz http://kernel.org/pub/linux/kernel/v4.x/linux-$KERNEL.tar.xz
-wget -o busybox.tar.bz2 http://busybox.net/downloads/busybox-$BUSYBOX.tar.bz2
-wget -o syslinux.tar.xz http://kernel.org/pub/linux/utils/boot/syslinux-6.03.tar.xz
+wget http://kernel.org/pub/linux/kernel/v4.x/linux-$KERNEL.tar.xz -q --show-progress
+wget http://busybox.net/downloads/busybox-$BUSYBOX.tar.bz2 -q --show-progress
+wget http://kernel.org/pub/linux/utils/boot/syslinux/syslinux-6.03.tar.xz -q --show-progress
 echo "Extracting Packages..."
 sleep 2
-tar -xvf kernel.tar.xz
-tar -xvf busybox.tar.bz2
-tar -xvf syslinux.tar.xz
+tar -xvf linux-$KERNEL.tar.xz
+tar -xvf busybox-$BUSYBOX.tar.xz
+tar -xvf syslinux-6.03.tar.xz
 mkdir isoimage
 logo
 echo "Compiling BusyBox..."
